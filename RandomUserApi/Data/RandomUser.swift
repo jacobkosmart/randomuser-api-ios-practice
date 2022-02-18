@@ -1,5 +1,5 @@
 //
-//  FetchData.swift
+//  RandomUser.swift
 //  RandomUserApi
 //
 //  Created by Jacob Ko on 2022/02/18.
@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: -  MODEL
 
-struct RandomUser: Codable, Identifiable {
+struct RandomUser: Codable, Identifiable, Equatable {
 	var id = UUID()
 	var name: Name
 	var photo: Photo
@@ -30,6 +30,12 @@ struct RandomUser: Codable, Identifiable {
 		get {
 			URL(string: photo.medium)!
 		}
+	}
+	
+	// 비교를 위한 Equatable protocol logic
+	// 첫번째, 두번째 값이 같다는 판단기준을 어떻게 할건지에 대해 작성하기
+	static func == (lhs: RandomUser, rhs: RandomUser) -> Bool {
+		return lhs.id == rhs.id
 	}
 }
 
@@ -60,7 +66,7 @@ struct Photo: Codable {
 }
 
 
-struct Info: Codable {
+struct Info: Codable, CustomStringConvertible {
 	var seed: String
 	var resultsCount: Int
 	var page: Int
@@ -70,6 +76,9 @@ struct Info: Codable {
 		case resultsCount = "results"
 		case page = "page"
 		case version = "version"
+	}
+	var infoDescription: String {
+		return "seed: \(seed) / resultCount: \(resultsCount) / page : \(page)"
 	}
 }
 

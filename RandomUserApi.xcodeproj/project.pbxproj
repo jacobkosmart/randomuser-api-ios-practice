@@ -19,6 +19,7 @@
 		812C6A2C27BF692200EDD315 /* RandomUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812C6A2B27BF692200EDD315 /* RandomUser.swift */; };
 		8130EA8627BF6D0E008DF3F5 /* RandomUserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8130EA8527BF6D0E008DF3F5 /* RandomUserViewModel.swift */; };
 		8130EA8927BF967A008DF3F5 /* Introspect in Frameworks */ = {isa = PBXBuildFile; productRef = 8130EA8827BF967A008DF3F5 /* Introspect */; };
+		8130EA8C27BFA68E008DF3F5 /* RandomUserRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8130EA8B27BFA68E008DF3F5 /* RandomUserRouter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 		812C6A2527BF64E600EDD315 /* RandomUserRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomUserRowView.swift; sourceTree = "<group>"; };
 		812C6A2B27BF692200EDD315 /* RandomUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomUser.swift; sourceTree = "<group>"; };
 		8130EA8527BF6D0E008DF3F5 /* RandomUserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomUserViewModel.swift; sourceTree = "<group>"; };
+		8130EA8B27BFA68E008DF3F5 /* RandomUserRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomUserRouter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +69,7 @@
 		812C6A0E27BF5F4900EDD315 /* RandomUserApi */ = {
 			isa = PBXGroup;
 			children = (
+				8130EA8A27BFA677008DF3F5 /* API */,
 				812C6A2A27BF690600EDD315 /* Data */,
 				812C6A1D27BF61A400EDD315 /* View */,
 				812C6A0F27BF5F4900EDD315 /* RandomUserApiApp.swift */,
@@ -101,6 +104,15 @@
 				8130EA8527BF6D0E008DF3F5 /* RandomUserViewModel.swift */,
 			);
 			path = Data;
+			sourceTree = "<group>";
+		};
+		8130EA8A27BFA677008DF3F5 /* API */ = {
+			isa = PBXGroup;
+			children = (
+				8130EA8B27BFA68E008DF3F5 /* RandomUserRouter.swift */,
+			);
+			name = API;
+			path = "몌ㅑ";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -190,6 +202,7 @@
 				812C6A1227BF5F4900EDD315 /* ContentView.swift in Sources */,
 				8130EA8627BF6D0E008DF3F5 /* RandomUserViewModel.swift in Sources */,
 				812C6A1027BF5F4900EDD315 /* RandomUserApiApp.swift in Sources */,
+				8130EA8C27BFA68E008DF3F5 /* RandomUserRouter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -20,12 +20,22 @@ struct ContentView: View {
 	var body: some View {
 		
 		List(randomUserViewModel.randomUsers) { aRandomUser in
+			
 			RandomUserRowView(aRandomUser)
+				.onAppear {
+					print("RandomUserRowView - onAppear() 호출됨")
+					fetchMoreData(aRandomUser)
+				}
 		}
 		.listStyle(.plain)
 		// MARK: -  Introspect 설정
 		.introspectTableView { tableView in
 			self.configureRefreshControl(tableView)
+		}
+		
+		// 데이터 로딩 중이라면, 로딩바 나오게 작동시키기
+		if randomUserViewModel.isLoading {
+			MYBottomProgressView()
 		}
 	}
 }
@@ -78,5 +88,25 @@ extension ContentView {
 		myRefresh.addTarget(refreshControlHelper, action: #selector(RefreshControlHelper.didRefresh), for: .valueChanged)
 		
 		tableView.refreshControl = myRefresh
+	}
+	
+	
+	fileprivate func fetchMoreData(_ randomUser: RandomUser) {
+		print(#fileID, #function, #line, "")
+		// RandomUserRowView 가 나타 날때 마지막 id 와 현재 id 를 비교
+		if self.randomUserViewModel.randomUsers.last == randomUser {
+			print("마지막 리스트입니다")
+			// 마지막 부분일때 ffetchMoreActionSubject 에 event 전송
+			randomUserViewModel.fetchMoreActionSubject.send()
+		}
+	}
+}
+
+// Bottom ProgressView
+struct MYBottomProgressView: View {
+	var body: some View {
+		ProgressView()
+			.progressViewStyle(CircularProgressViewStyle(tint: Color.yellow)
+			).scaleEffect(1.7, anchor: .center)
 	}
 }

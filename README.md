@@ -442,6 +442,358 @@ fileprivate func fetchRandomUser() {
 
 ### 🔷 Part 3.Infinite Scroll (Pagination)
 
+> RandomUser api Pagenation
+
+![image](https://user-images.githubusercontent.com/28912774/154660300-a64b11a0-0c11-42e2-ac8f-80b81a76e0b3.png)
+
+#### 🔶 Router 생성
+
+기존의 baseUrl 과 다른 api 호출 url 이기 때문에 따로 만들어 Router 를 만들어서 url 을 관리합니다
+
+> Alamofire Routing Requests - https://github.com/Alamofire/Alamofire/blob/master/Documentation/AdvancedUsage.md#routing-requests
+
+```swift
+//  RandomUserRouter.swift
+
+import Foundation
+import Alamofire
+
+
+// https://randomuser.me/api/?page=3&results=10&seed=abc
+let BASE_URL = "https://randomuser.me/api/"
+
+enum RandomUserRouter: URLRequestConvertible {
+case getUsers(page: Int = 1, results: Int = 20)
+
+var baseURL: URL {
+	return URL(string: BASE_URL)!
+}
+
+var endPoint: String {
+	switch self {
+	case .getUsers:
+		return ""
+	default:
+		return ""
+	}
+}
+
+var method: HTTPMethod {
+	switch self {
+	case .getUsers:
+		return .get
+	default: return .get
+	}
+}
+
+var parameters: Parameters {
+	switch self {
+	case .getUsers(let page , let results):
+		var params = Parameters()
+		params["page"] = page
+		params["results"] = results
+		params["seed"] = "abc"
+		return params
+	default:
+		return Parameters()
+	}
+}
+
+func asURLRequest() throws -> URLRequest {
+	let url = baseURL.appendingPathComponent(endPoint)
+
+	var request = URLRequest(url: url)
+	request.method = method
+
+	switch self {
+	case .getUsers:
+		request = try URLEncoding.default.encode(request, with: parameters)
+	default:
+		return request
+	}
+	return request
+}
+}
+
+```
+
+```swift
+// in RandomUser.swift
+struct Info: Codable, CustomStringConvertible {
+	var seed: String
+	var resultsCount: Int
+	var page: Int
+	var version: String
+	private enum CodingKeys: String, CodingKey {
+		case seed = "seed"
+		case resultsCount = "results"
+		case page = "page"
+		case version = "version"
+	}
+	var infoDescription: String {
+		return "seed: \(seed) / resultCount: \(resultsCount) / page : \(page)"
+	}
+}
+
+```
+
+```swift
+//  RandomUserViewModel.swift
+
+// MARK: -  Properties
+@Published var pageInfo: Info? {
+	didSet {
+		print("pageInfo: \(pageInfo)")
+	}
+}
+
+// MARK: -  FUNCTION
+// combine 형태로
+fileprivate func fetchRandomUser() {
+	print(#fileID, #function, #line, "")
+	AF.request(RandomUserRouter.getUsers())
+		.publishDecodable(type: RandomUserResponse.self)
+	// combine 에서 옵셔널을 제거 : compatMap 을 사용해서 optional 일 경우에 값이 있는 경우에것만 값으로 가져옴 -> unwrapping 이 자동으로 됨
+		.compactMap{ $0.value }
+	// sink 를 해서 구독을 해줌
+		.sink { completion in
+			print("데이터 가져오기 성공")
+		} receiveValue: { receivedValue in
+			print("받은 값 : \(receivedValue.results.count)")
+			self.randomUsers = receivedValue.results
+			self.pageInfo = receivedValue.info
+		}
+	// 구독이 완료되면 메모리에서 지워줌
+		.store(in: &subscription)
+}
+}
+```
+
+![Kapture 2022-02-18 at 19 36 31](https://user-images.githubusercontent.com/28912774/154666810-3c11998f-f714-4d36-95c8-d6ddfb77e1a1.gif)
+
+#### 🔶 다음 페이지 호출하기
+
+불러온 데이터에서 리스트가 마지막에 닿았을때, 다음 페이지를 호출하기
+
+- 맨 list 마지막에 닿았다는 것을 알게 되는것은 RandomUser 에는 각각의 고유 ID 값이 있는데, 제일 마지막에 있는 ID 와 현재 ID 와 같으면 거기가 맨마지막이라고 설정할 수 있다 -> Equatable protocol 사용
+
+```swift
+//  RandomUser.swift
+struct RandomUser: Codable, Identifiable, Equatable {
+	var id = UUID()
+	var name: Name
+	var photo: Photo
+
+	// Jaon 에서 picture 인데 parsing 할때 photo 로 이름 을 바꿔 줌: CodingKey
+	private enum CodingKeys: String, CodingKey {
+		case name = "name"
+		case photo = "picture"
+	}
+	// preview 사용을 위한 dummy data 생성
+	static func getDummy() -> Self {
+		print(#fileID, #function, #line, "")
+		return RandomUser(name: Name.getDummy(), photo: Photo.getDummy())
+	}
+
+	// randomUser 의 profileImage 를 가져오기
+	var profileImageUrl : URL {
+		get {
+			URL(string: photo.medium)!
+		}
+	}
+
+	// 비교를 위한 Equatable protocol logic
+	// 첫번째, 두번째 값이 같다는 판단기준을 어떻게 할건지에 대해 작성하기
+	static func == (lhs: RandomUser, rhs: RandomUser) -> Bool {
+		return lhs.id == rhs.id
+	}
+}
+```
+
+```swift
+// ContentView.swift
+
+// MARK: -  BODY
+var body: some View {
+
+List(randomUserViewModel.randomUsers) { aRandomUser in
+
+RandomUserRowView(aRandomUser)
+	.onAppear {
+		print("RandomUserRowView - onAppear() 호출됨")
+		// RandomUserRowView 가 나타 날때 마지막 id 와 현재 id 를 비교
+		if self.randomUserViewModel.randomUsers.last == aRandomUser {
+			print("마지막 리스트입니다")
+			// 마지막 부분일때 ffetchMoreActionSubject 에 event 전송
+			randomUserViewModel.fetchMoreActionSubject.send()
+		}
+	}
+}
+.listStyle(.plain)
+
+```
+
+```swift
+//  RandomUserViewModel.swift
+
+import Foundation
+import Combine
+import Alamofire
+
+// MARK: -  VIEWMODEL
+
+class RandomUserViewModel: ObservableObject {
+// MARK: -  Properties
+// 나중에 메모리에서 날리기 위해서 subscription 생성
+var subscription = Set<AnyCancellable>()
+
+// randomUsers 빈 배열 생성 - 받아온 데이터 저장 공간
+@Published var randomUsers = [RandomUser]()
+@Published var pageInfo: Info? {
+	didSet {
+		print("pageInfo: \(pageInfo)")
+	}
+}
+
+// refresh action 을 위한 PassthroughSubject subject 생성 - 단방향으로 이벤트를 한번만 보내기
+var refreshActionSubject = PassthroughSubject<(), Never>()
+
+// list 바닥에 닿았을때 refresh action 실행 하고 그 action 에 fetchMore() 가 실행되게 함
+var fetchMoreActionSubject = PassthroughSubject<(), Never>()
+
+// 호출할 API 주소
+var baseUrl = "https://randomuser.me/api/?results=100"
+
+// ViewModel 이 생성이 될때 API 를 fetch  하게 함
+init() {
+	// code 자동 완성
+	print(#fileID, #function, #line, "")
+	fetchRandomUser()
+
+	// refreshActionSubject 구독하기
+	refreshActionSubject.sink{ [weak self] _ in
+		guard let self = self else { return }
+		print("RandomUserViewmodel 에 init 에 refreshActionSubject 가 호출 되었음")
+		self.fetchRandomUser()
+	}.store(in: &subscription)
+
+	// fetchMoreActionSubject 구독하기
+	fetchMoreActionSubject.sink{ [weak self] _ in
+		guard let self = self else { return }
+		print("RandomUserViewmodel 에 init 에 refreshActionSubject 가 호출 되었음")
+		self.fetchMore()
+	}.store(in: &subscription)
+}
+
+// MARK: -  FUNCTION
+// fetch 데이터 가져오기
+fileprivate func fetchRandomUser() {
+	print(#fileID, #function, #line, "")
+	AF.request(RandomUserRouter.getUsers())
+		.publishDecodable(type: RandomUserResponse.self)
+	// combine 에서 옵셔널을 제거 : compatMap 을 사용해서 optional 일 경우에 값이 있는 경우에것만 값으로 가져옴 -> unwrapping 이 자동으로 됨
+		.compactMap{ $0.value }
+	// sink 를 해서 구독을 해줌
+		.sink { completion in
+			print("데이터 가져오기 성공")
+		} receiveValue: { receivedValue in
+			print("받은 값 : \(receivedValue.results.count)")
+			self.randomUsers = receivedValue.results
+			self.pageInfo = receivedValue.info
+		}
+	// 구독이 완료되면 메모리에서 지워줌
+		.store(in: &subscription)
+}
+
+// 마지막에 닿았을때 추가로 데이터 가져오기
+fileprivate func fetchMore() {
+	print(#fileID, #function, #line, "")
+	guard let currentPage = pageInfo?.page else {
+		print("페이지 정보가 없습니다")
+		return
+	}
+
+	// 현재 페이지 에서 +1 해서 다음페이지가 호출되게 함
+	let pageToLoad = currentPage + 1
+	AF.request(RandomUserRouter.getUsers(page: pageToLoad))
+		.publishDecodable(type: RandomUserResponse.self)
+	// combine 에서 옵셔널을 제거 : compatMap 을 사용해서 optional 일 경우에 값이 있는 경우에것만 값으로 가져옴 -> unwrapping 이 자동으로 됨
+		.compactMap{ $0.value }
+	// sink 를 해서 구독을 해줌
+		.sink { completion in
+			print("데이터 가져오기 성공")
+		} receiveValue: { receivedValue in
+			print("받은 값 : \(receivedValue.results.count)")
+			// 기존것에 계속 누적 시켜서 api 를 호출 시킴
+			self.randomUsers += receivedValue.results
+			self.pageInfo = receivedValue.info
+		}
+	// 구독이 완료되면 메모리에서 지워줌
+		.store(in: &subscription)
+}
+}
+```
+
+이러면 화면상으로 무한 스크롤 기능 구현 완료
+
+<img height="350" alt="스크린샷" src="https://user-images.githubusercontent.com/28912774/154671989-e75fcbe3-0dc4-4851-b4da-ece5584eb6a5.gif">
+
+- 버그가 있는데, 스크롤을 빠르게 하다보면 아직 데이터가 fetch 되지 도 않았는데 data 가 당겨져 와져서 page 가 중복이 되는 bug 가 발생 된다 (아래 그림에서 page 11 의 경우 버그 발생)
+
+![Kapture 2022-02-18 at 20 06 50](https://user-images.githubusercontent.com/28912774/154671772-8382af09-7f4c-4568-a4dd-60fb9985449d.gif)
+
+🔑 위와 같이 페이지 중복 버그를 고치기 위해서는 데이터가 로딩을 안하고 있을때만, 데이터를 가져오게끔 logic 작성
+
+```swift
+//  RandomUserViewModel.swift
+// fetchMoreActionSubject 구독하기
+	fetchMoreActionSubject.sink{ [weak self] _ in
+		guard let self = self else { return }
+		print("RandomUserViewmodel 에 init 에 refreshActionSubject 가 호출 되었음")
+
+		// loading 중이 아닐때만 fetchMore 가 실행되게 함
+		if !self.isLoading {
+			self.fetchMore()
+		}
+	}.store(in: &subscription)
+}
+// 로딩 시작이 안되된것을 알려줌
+self.isLoading = true
+
+// 현재 페이지 에서 +1 해서 다음페이지가 호출되게 함
+let pageToLoad = currentPage + 1
+AF.request(RandomUserRouter.getUsers(page: pageToLoad))
+	.publishDecodable(type: RandomUserResponse.self)
+// combine 에서 옵셔널을 제거 : compatMap 을 사용해서 optional 일 경우에 값이 있는 경우에것만 값으로 가져옴 -> unwrapping 이 자동으로 됨
+	.compactMap{ $0.value }
+// sink 를 해서 구독을 해줌
+	.sink { completion in
+		print("데이터 가져오기 성공")
+		// 데이터를 가져오면 로딩 false 로 변경
+		self.isLoading = false
+
+```
+
+- UI 에서 로딩중이라면, 리스트 마지막 부분에서 `ProgressView()` 가 나오게 호출
+
+```swift
+// ContentView.swift
+
+// MARK: -  Introspect 설정
+.introspectTableView { tableView in
+	self.configureRefreshControl(tableView)
+}
+
+// 데이터 로딩 중이라면, 로딩바 나오게 작동시키기
+if randomUserViewModel.isLoading {
+	ProgressView()
+		.progressViewStyle(CircularProgressViewStyle(tint: Color.yellow))
+}
+}
+```
+
+<img height="350" alt="스크린샷" src="https://user-images.githubusercontent.com/28912774/154674813-32997508-a91e-4c8c-96d6-c6c78b921fd4.gif">
+
 <!-- <img height="350" alt="스크린샷" src=""> -->
 
 <!-- README 한 줄에 여러 screenshoot 놓기 예제 -->
