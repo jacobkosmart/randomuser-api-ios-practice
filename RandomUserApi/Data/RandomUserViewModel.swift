@@ -19,6 +19,9 @@ class RandomUserViewModel: ObservableObject {
 	// randomUsers 빈 배열 생성 - 받아온 데이터 저장 공간
 	@Published var randomUsers = [RandomUser]()
 	
+	// refresh action 을 위한 PassthroughSubject subject 생성 - 단방향으로 이벤트를 한번만 보내기
+	var refreshActionSubject = PassthroughSubject<(), Never>()
+	
 	// 호출할 API 주소
 	var baseUrl = "https://randomuser.me/api/?results=100"
 	
@@ -27,10 +30,18 @@ class RandomUserViewModel: ObservableObject {
 		// code 자동 완성
 		print(#fileID, #function, #line, "")
 		fetchRandomUser()
+		
+		// refreshActionSubject 구독하기
+		refreshActionSubject.sink{ [weak self] _ in
+			guard let self = self else { return }
+			print("RandomUserViewmodel 에 init 에 refreshActionSubject 가 호출 되었음")
+			self.fetchRandomUser()
+		}.store(in: &subscription)
 	}
 	
 	// MARK: -  FUNCTION
-	func fetchRandomUser() {
+	// combine 형태로
+	fileprivate func fetchRandomUser() {
 		print(#fileID, #function, #line, "")
 		AF.request(baseUrl)
 			.publishDecodable(type: RandomUserResponse.self)
