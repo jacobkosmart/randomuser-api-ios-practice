@@ -1,6 +1,6 @@
 # RandomUserApi-ios-practice
 
-<!-- ! gif 스크린샷 -->
+<img height="350" alt="스크린샷" src="https://user-images.githubusercontent.com/28912774/155453445-cd865098-8eb9-4395-b62b-0855d9671caf.gif">
 
 ## 📌 Main Features
 
